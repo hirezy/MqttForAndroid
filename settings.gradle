@@ -1,0 +1,4 @@
+
+include ':lib-mqtt'
+include ':app'
+rootProject.name = "MyMqttForAndroid"

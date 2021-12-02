@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="colorPrimary">@color/colorTheme</color>
+    <color name="colorPrimaryDark">@color/colorTheme</color>
+    <color name="colorAccent">@color/colorTheme</color>
+    <color name="colorTheme">#301AAF</color>
+    <color name="colorGray">#757282</color>
+    <color name="colorOrange">#FF5722</color>
+    <color name="colorRed">#FF0000</color>
+    <color name="colorOrangeLight">#FDBA6E</color>
+    <color name="colorGrayLight">#EDEDED</color>
+    <color name="colorPurpleLight">#8678C0</color>
+    <color name="colorRedAlpha">#CC59000B</color>
+    <color name="colorBlueAlpha">#CC150A40</color>
+
+    <color name="colorRecognition">#13DB8B</color>
+    <color name="colorStranger">#DFB427</color>
+    <color name="colorBlacklist">#D92519</color>
+    <color name="colorStaff">#0051FE</color>
+    <color name="colorVisitors">#0000ff</color>
+
+    <color name="colorAlphaWhite40">#66FFFFFF</color>
+    <color name="colorAlphaWhite50">#80FFFFFF</color>
+    <color name="colorAlphaWhite80">#CCFFFFFF</color>
+    <color name="colorGreen1">#21D35C</color>
+
+    <color name="tick_yellow">#f5d747</color>
+    <color name="tick_gray">#eaeaea</color>
+    <color name="tick_white">#fff</color>
+
+
+</resources>
