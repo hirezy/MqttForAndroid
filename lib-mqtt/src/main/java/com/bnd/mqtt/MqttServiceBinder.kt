@@ -1,41 +1,25 @@
+package com.bnd.mqtt
 
-package com.bnd.mqtt;
-
-import android.os.Binder;
+import android.os.Binder
 
 /**
  * What the Service passes to the Activity on binding:-
- * <ul>
- * <li>a reference to the Service
- * <li>the activityToken provided when the Service was started
- * </ul>
- * 
+ *
+ *  * a reference to the Service
+ *  * the activityToken provided when the Service was started
+ *
+ *
  */
-class MqttServiceBinder extends Binder {
+internal class MqttServiceBinder(
+    /**
+     * @return a reference to the Service
+     */
+    val service: MqttService
+) : Binder() {
 
-	private MqttService mqttService;
-	private String activityToken;
-
-	MqttServiceBinder(MqttService mqttService) {
-		this.mqttService = mqttService;
-	}
-
-	/**
-	 * @return a reference to the Service
-	 */
-	public MqttService getService() {
-		return mqttService;
-	}
-
-	void setActivityToken(String activityToken) {
-		this.activityToken = activityToken;
-	}
-
-	/**
-	 * @return the activityToken provided when the Service was started
-	 */
-	public String getActivityToken() {
-		return activityToken;
-	}
+    /**
+     * @return the activityToken provided when the Service was started
+     */
+    var activityToken: String? = null
 
 }

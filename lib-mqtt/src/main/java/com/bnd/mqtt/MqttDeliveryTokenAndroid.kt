@@ -1,43 +1,35 @@
-
-package com.bnd.mqtt;
-
-import org.eclipse.paho.client.mqttv3.IMqttActionListener;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
+package com.bnd.mqtt
+import org.eclipse.paho.client.mqttv3.IMqttActionListener
+import org.eclipse.paho.client.mqttv3.MqttMessage
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
+import org.eclipse.paho.client.mqttv3.MqttException
 
 /**
- * <p>
+ *
+ *
  * Implementation of the IMqttDeliveryToken interface for use from within the
  * MqttAndroidClient implementation
  */
-class MqttDeliveryTokenAndroid extends MqttTokenAndroid
-		implements IMqttDeliveryToken {
+internal class MqttDeliveryTokenAndroid(
+    client: MqttAndroidClient?,
+    userContext: Any?,
+    listener: IMqttActionListener?, // The message which is being tracked by this token
+    private var message: MqttMessage
+) : MqttTokenAndroid(client, userContext, listener), IMqttDeliveryToken {
+    /**
+     * @see IMqttDeliveryToken.getMessage
+     */
+    @Throws(MqttException::class)
+    override fun getMessage(): MqttMessage {
+        return message
+    }
 
-	// The message which is being tracked by this token
-	private MqttMessage message;
+    fun setMessage(message: MqttMessage) {
+        this.message = message
+    }
 
-	MqttDeliveryTokenAndroid(MqttAndroidClient client,
-                             Object userContext, IMqttActionListener listener, MqttMessage message) {
-		super(client, userContext, listener);
-		this.message = message;
-	}
-
-	/**
-	 * @see IMqttDeliveryToken#getMessage()
-	 */
-	@Override
-	public MqttMessage getMessage() throws MqttException {
-		return message;
-	}
-
-	void setMessage(MqttMessage message) {
-		this.message = message;
-	}
-
-	void notifyDelivery(MqttMessage delivered) {
-		message = delivered;
-		super.notifyComplete();
-	}
-
+    fun notifyDelivery(delivered: MqttMessage) {
+        message = delivered
+        super.notifyComplete()
+    }
 }

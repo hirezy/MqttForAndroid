@@ -1,45 +1,43 @@
-
-package com.bnd.mqtt;
+package com.bnd.mqtt
 
 /**
  * Interface for simple trace handling, pass the trace message to trace
  * callback.
- * 
+ *
  */
+interface MqttTraceHandler {
+    /**
+     * Trace debugging information
+     *
+     * @param tag
+     * identifier for the source of the trace
+     * @param message
+     * the text to be traced
+     */
+    fun traceDebug(tag: String?, message: String?)
 
-public interface MqttTraceHandler {
+    /**
+     * Trace error information
+     *
+     * @param tag
+     * identifier for the source of the trace
+     * @param message
+     * the text to be traced
+     */
+    fun traceError(tag: String?, message: String?)
 
-	/**
-	 * Trace debugging information
-	 * 
-	 * @param tag
-	 *            identifier for the source of the trace
-	 * @param message
-	 *            the text to be traced
-	 */
-	void traceDebug(String tag, String message);
-
-	/**
-	 * Trace error information
-	 * 
-	 * @param tag
-	 *            identifier for the source of the trace
-	 * @param message
-	 *            the text to be traced
-	 */
-	void traceError(String tag, String message);
-
-	/**
-	 * trace exceptions
-	 * 
-	 * @param tag
-	 *            identifier for the source of the trace
-	 * @param message
-	 *            the text to be traced
-	 * @param e
-	 *            the exception
-	 */
-	void traceException(String tag, String message,
-                        Exception e);
-
+    /**
+     * trace exceptions
+     *
+     * @param tag
+     * identifier for the source of the trace
+     * @param message
+     * the text to be traced
+     * @param e
+     * the exception
+     */
+    fun traceException(
+        tag: String?, message: String?,
+        e: Exception?
+    )
 }

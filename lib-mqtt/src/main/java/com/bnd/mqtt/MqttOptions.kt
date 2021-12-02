@@ -14,5 +14,4 @@ data class MqttOptions(
     val reconnectInterval: Long = 1000,
     val keepAliveInterval: Int = 20,
     val connectTimeOut: Int = 10
-
 )

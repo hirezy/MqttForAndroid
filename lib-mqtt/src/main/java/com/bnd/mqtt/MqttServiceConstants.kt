@@ -1,88 +1,84 @@
-
-package com.bnd.mqtt;
+package com.bnd.mqtt
 
 /**
  * Various strings used to identify operations or data in the Android MQTT
  * service, mainly used in Intents passed between Activities and the Service.
  */
-interface MqttServiceConstants {
-
-	/*
+internal interface MqttServiceConstants {
+    companion object {
+        /*
 	 * Version information
 	 */
-	
-	String VERSION = "v0";
-	
-  /*
+        const val VERSION = "v0"
+
+        /*
    * Attributes of messages <p> Used for the column names in the database
    */
-  String DUPLICATE = "duplicate";
-  String RETAINED = "retained";
-  String QOS = "qos";
-  String PAYLOAD = "payload";
-  String DESTINATION_NAME = "destinationName";
-  String CLIENT_HANDLE = "clientHandle";
-  String MESSAGE_ID = "messageId";
+        const val DUPLICATE = "duplicate"
+        const val RETAINED = "retained"
+        const val QOS = "qos"
+        const val PAYLOAD = "payload"
+        const val DESTINATION_NAME = "destinationName"
+        const val CLIENT_HANDLE = "clientHandle"
+        const val MESSAGE_ID = "messageId"
 
-  /* Tags for actions passed between the Activity and the Service */
-  String SEND_ACTION = "send";
-  String UNSUBSCRIBE_ACTION = "unsubscribe";
-  String SUBSCRIBE_ACTION = "subscribe";
-  String DISCONNECT_ACTION = "disconnect";
-  String CONNECT_ACTION = "connect";
-  String CONNECT_EXTENDED_ACTION = "connectExtended";
-  String MESSAGE_ARRIVED_ACTION = "messageArrived";
-  String MESSAGE_DELIVERED_ACTION = "messageDelivered";
-  String ON_CONNECTION_LOST_ACTION = "onConnectionLost";
-  String TRACE_ACTION = "trace";
+        /* Tags for actions passed between the Activity and the Service */
+        const val SEND_ACTION = "send"
+        const val UNSUBSCRIBE_ACTION = "unsubscribe"
+        const val SUBSCRIBE_ACTION = "subscribe"
+        const val DISCONNECT_ACTION = "disconnect"
+        const val CONNECT_ACTION = "connect"
+        const val CONNECT_EXTENDED_ACTION = "connectExtended"
+        const val MESSAGE_ARRIVED_ACTION = "messageArrived"
+        const val MESSAGE_DELIVERED_ACTION = "messageDelivered"
+        const val ON_CONNECTION_LOST_ACTION = "onConnectionLost"
+        const val TRACE_ACTION = "trace"
 
-  /* Identifies an Intent which calls back to the Activity */
-  String CALLBACK_TO_ACTIVITY = MqttService.TAG
-                                             + ".callbackToActivity"+"."+VERSION;
+        /* Identifies an Intent which calls back to the Activity */
+        const val CALLBACK_TO_ACTIVITY = (MqttService.TAG
+                + ".callbackToActivity" + "." + VERSION)
 
-  /* Identifiers for extra data on Intents broadcast to the Activity */
-  String CALLBACK_ACTION = MqttService.TAG + ".callbackAction";
-  String CALLBACK_STATUS = MqttService.TAG + ".callbackStatus";
-  String CALLBACK_CLIENT_HANDLE = MqttService.TAG + "."
-                                               + CLIENT_HANDLE;
-  String CALLBACK_ERROR_MESSAGE = MqttService.TAG
-                                               + ".errorMessage";
-  String CALLBACK_EXCEPTION_STACK = MqttService.TAG
-                                                 + ".exceptionStack";
-  String CALLBACK_INVOCATION_CONTEXT = MqttService.TAG + "."
-                                                    + "invocationContext";
-  String CALLBACK_ACTIVITY_TOKEN = MqttService.TAG + "."
-                                                + "activityToken";
-  String CALLBACK_DESTINATION_NAME = MqttService.TAG + '.'
-                                                  + DESTINATION_NAME;
-  String CALLBACK_MESSAGE_ID = MqttService.TAG + '.'
-                                            + MESSAGE_ID;
-  String CALLBACK_RECONNECT = MqttService.TAG + ".reconnect";
-  String CALLBACK_SERVER_URI = MqttService.TAG + ".serverURI";
-  String CALLBACK_MESSAGE_PARCEL = MqttService.TAG + ".PARCEL";
-  String CALLBACK_TRACE_SEVERITY = MqttService.TAG
-                                                + ".traceSeverity";
-  String CALLBACK_TRACE_TAG = MqttService.TAG + ".traceTag";
-  String CALLBACK_TRACE_ID = MqttService.TAG + ".traceId";
-  String CALLBACK_ERROR_NUMBER = MqttService.TAG
-                                              + ".ERROR_NUMBER";
+        /* Identifiers for extra data on Intents broadcast to the Activity */
+        const val CALLBACK_ACTION = MqttService.TAG + ".callbackAction"
+        const val CALLBACK_STATUS = MqttService.TAG + ".callbackStatus"
+        const val CALLBACK_CLIENT_HANDLE = (MqttService.TAG + "."
+                + CLIENT_HANDLE)
+        const val CALLBACK_ERROR_MESSAGE = (MqttService.TAG
+                + ".errorMessage")
+        const val CALLBACK_EXCEPTION_STACK = (MqttService.TAG
+                + ".exceptionStack")
+        const val CALLBACK_INVOCATION_CONTEXT = (MqttService.TAG + "."
+                + "invocationContext")
+        const val CALLBACK_ACTIVITY_TOKEN = (MqttService.TAG + "."
+                + "activityToken")
+        const val CALLBACK_DESTINATION_NAME = (MqttService.TAG + '.'
+                + DESTINATION_NAME)
+        const val CALLBACK_MESSAGE_ID = (MqttService.TAG + '.'
+                + MESSAGE_ID)
+        const val CALLBACK_RECONNECT = MqttService.TAG + ".reconnect"
+        const val CALLBACK_SERVER_URI = MqttService.TAG + ".serverURI"
+        const val CALLBACK_MESSAGE_PARCEL = MqttService.TAG + ".PARCEL"
+        const val CALLBACK_TRACE_SEVERITY = (MqttService.TAG
+                + ".traceSeverity")
+        const val CALLBACK_TRACE_TAG = MqttService.TAG + ".traceTag"
+        const val CALLBACK_TRACE_ID = MqttService.TAG + ".traceId"
+        const val CALLBACK_ERROR_NUMBER = (MqttService.TAG
+                + ".ERROR_NUMBER")
+        const val CALLBACK_EXCEPTION = MqttService.TAG + ".exception"
 
-  String CALLBACK_EXCEPTION = MqttService.TAG + ".exception";
-  
-  //Intent prefix for Ping sender.
-  String PING_SENDER = MqttService.TAG + ".pingSender.";
-  
-  //Constant for wakelock
-  String PING_WAKELOCK = MqttService.TAG + ".client.";
-  String WAKELOCK_NETWORK_INTENT = MqttService.TAG + "";
+        //Intent prefix for Ping sender.
+        const val PING_SENDER = MqttService.TAG + ".pingSender."
 
-  //Trace severity levels  
-  String TRACE_ERROR = "error";
-  String TRACE_DEBUG = "debug";
-  String TRACE_EXCEPTION = "exception";
-  
-  
-  //exception code for non MqttExceptions
-  int NON_MQTT_EXCEPTION = -1;
+        //Constant for wakelock
+        const val PING_WAKELOCK = MqttService.TAG + ".client."
+        const val WAKELOCK_NETWORK_INTENT = MqttService.TAG + ""
 
+        //Trace severity levels  
+        const val TRACE_ERROR = "error"
+        const val TRACE_DEBUG = "debug"
+        const val TRACE_EXCEPTION = "exception"
+
+        //exception code for non MqttExceptions
+        const val NON_MQTT_EXCEPTION = -1
+    }
 }

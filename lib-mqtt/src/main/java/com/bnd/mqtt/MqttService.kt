@@ -1,253 +1,236 @@
-
-package com.bnd.mqtt;
-
-import android.annotation.SuppressLint;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.Service;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.IBinder;
-import android.os.PowerManager;
-import android.os.PowerManager.WakeLock;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
-import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
-import org.eclipse.paho.client.mqttv3.MqttClientPersistence;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
-import org.eclipse.paho.client.mqttv3.MqttSecurityException;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+package com.bnd.mqtt
+import android.annotation.SuppressLint
+import android.app.Notification
+import kotlin.jvm.Volatile
+import android.os.Bundle
+import android.content.Intent
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import org.eclipse.paho.client.mqttv3.MqttClientPersistence
+import org.eclipse.paho.client.mqttv3.MqttSecurityException
+import org.eclipse.paho.client.mqttv3.MqttException
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions
+import org.eclipse.paho.client.mqttv3.MqttPersistenceException
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
+import org.eclipse.paho.client.mqttv3.MqttMessage
+import org.eclipse.paho.client.mqttv3.IMqttMessageListener
+import android.app.NotificationManager
+import android.os.IBinder
+import android.os.Build
+import android.app.NotificationChannel
+import android.app.Service
+import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.os.PowerManager
+import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions
+import java.lang.IllegalArgumentException
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * <p>
+ *
+ *
  * The android service which interfaces with an MQTT client implementation
- * </p>
- * <p>
+ *
+ *
+ *
  * The main API of MqttService is intended to pretty much mirror the
- * IMqttAsyncClient with appropriate adjustments for the Android environment.<br>
+ * IMqttAsyncClient with appropriate adjustments for the Android environment.<br></br>
  * These adjustments usually consist of adding two parameters to each method :-
- * </p>
- * <ul>
- * <li>invocationContext - a string passed from the application to identify the
+ *
+ *
+ *  * invocationContext - a string passed from the application to identify the
  * context of the operation (mainly included for support of the javascript API
- * implementation)</li>
- * <li>activityToken - a string passed from the Activity to relate back to a
- * callback method or other context-specific data</li>
- * </ul>
- * <p>
+ * implementation)
+ *  * activityToken - a string passed from the Activity to relate back to a
+ * callback method or other context-specific data
+ *
+ *
+ *
  * To support multiple client connections, the bulk of the MQTT work is
  * delegated to MqttConnection objects. These are identified by "client
  * handle" strings, which is how the Activity, and the higher-level APIs refer
  * to them.
- * </p>
- * <p>
+ *
+ *
+ *
  * Activities using this service are expected to start it and bind to it using
  * the BIND_AUTO_CREATE flag. The life cycle of this service is based on this
  * approach.
- * </p>
- * <p>
+ *
+ *
+ *
  * Operations are highly asynchronous - in most cases results are returned to
  * the Activity by broadcasting one (or occasionally more) appropriate Intents,
- * which the Activity is expected to register a listener for.<br>
+ * which the Activity is expected to register a listener for.<br></br>
  * The Intents have an Action of
- * {@link MqttServiceConstants#CALLBACK_TO_ACTIVITY
- * MqttServiceConstants.CALLBACK_TO_ACTIVITY} which allows the Activity to
- * register a listener with an appropriate IntentFilter.<br>
+ * [ MqttServiceConstants.CALLBACK_TO_ACTIVITY][MqttServiceConstants.CALLBACK_TO_ACTIVITY] which allows the Activity to
+ * register a listener with an appropriate IntentFilter.<br></br>
  * Further data is provided by "Extra Data" in the Intent, as follows :-
- * </p>
+ *
  * <table border="1" summary="">
  * <tr>
  * <th align="left">Name</th>
  * <th align="left">Data Type</th>
  * <th align="left">Value</th>
  * <th align="left">Operations used for</th>
- * </tr>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#CALLBACK_CLIENT_HANDLE
- * MqttServiceConstants.CALLBACK_CLIENT_HANDLE}</td>
+ * [ MqttServiceConstants.CALLBACK_CLIENT_HANDLE][MqttServiceConstants.CALLBACK_CLIENT_HANDLE]</td>
  * <td align="left" valign="top">String</td>
  * <td align="left" valign="top">The clientHandle identifying the client which
  * initiated this operation</td>
  * <td align="left" valign="top">All operations</td>
- * </tr>
+</tr> *
  * <tr>
- * <td align="left" valign="top">{@link MqttServiceConstants#CALLBACK_STATUS
- * MqttServiceConstants.CALLBACK_STATUS}</td>
+ * <td align="left" valign="top">[ MqttServiceConstants.CALLBACK_STATUS][MqttServiceConstants.CALLBACK_STATUS]</td>
  * <td align="left" valign="top">Serializable</td>
- * <td align="left" valign="top">An {@link Status} value indicating success or
+ * <td align="left" valign="top">An [Status] value indicating success or
  * otherwise of the operation</td>
  * <td align="left" valign="top">All operations</td>
- * </tr>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#CALLBACK_ACTIVITY_TOKEN
- * MqttServiceConstants.CALLBACK_ACTIVITY_TOKEN}</td>
+ * [ MqttServiceConstants.CALLBACK_ACTIVITY_TOKEN][MqttServiceConstants.CALLBACK_ACTIVITY_TOKEN]</td>
  * <td align="left" valign="top">String</td>
  * <td align="left" valign="top">the activityToken passed into the operation</td>
  * <td align="left" valign="top">All operations</td>
- * </tr>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#CALLBACK_INVOCATION_CONTEXT
- * MqttServiceConstants.CALLBACK_INVOCATION_CONTEXT}</td>
+ * [ MqttServiceConstants.CALLBACK_INVOCATION_CONTEXT][MqttServiceConstants.CALLBACK_INVOCATION_CONTEXT]</td>
  * <td align="left" valign="top">String</td>
  * <td align="left" valign="top">the invocationContext passed into the operation
- * </td>
+</td> *
  * <td align="left" valign="top">All operations</td>
- * </tr>
+</tr> *
  * <tr>
- * <td align="left" valign="top">{@link MqttServiceConstants#CALLBACK_ACTION
- * MqttServiceConstants.CALLBACK_ACTION}</td>
+ * <td align="left" valign="top">[ MqttServiceConstants.CALLBACK_ACTION][MqttServiceConstants.CALLBACK_ACTION]</td>
  * <td align="left" valign="top">String</td>
  * <td align="left" valign="top">one of
  * <table summary="">
  * <tr>
- * <td align="left" valign="top"> {@link MqttServiceConstants#SEND_ACTION
- * MqttServiceConstants.SEND_ACTION}</td>
- * </tr>
+ * <td align="left" valign="top"> [ MqttServiceConstants.SEND_ACTION][MqttServiceConstants.SEND_ACTION]</td>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#UNSUBSCRIBE_ACTION
- * MqttServiceConstants.UNSUBSCRIBE_ACTION}</td>
- * </tr>
+ * [ MqttServiceConstants.UNSUBSCRIBE_ACTION][MqttServiceConstants.UNSUBSCRIBE_ACTION]</td>
+</tr> *
  * <tr>
- * <td align="left" valign="top"> {@link MqttServiceConstants#SUBSCRIBE_ACTION
- * MqttServiceConstants.SUBSCRIBE_ACTION}</td>
- * </tr>
+ * <td align="left" valign="top"> [ MqttServiceConstants.SUBSCRIBE_ACTION][MqttServiceConstants.SUBSCRIBE_ACTION]</td>
+</tr> *
  * <tr>
- * <td align="left" valign="top"> {@link MqttServiceConstants#DISCONNECT_ACTION
- * MqttServiceConstants.DISCONNECT_ACTION}</td>
- * </tr>
+ * <td align="left" valign="top"> [ MqttServiceConstants.DISCONNECT_ACTION][MqttServiceConstants.DISCONNECT_ACTION]</td>
+</tr> *
  * <tr>
- * <td align="left" valign="top"> {@link MqttServiceConstants#CONNECT_ACTION
- * MqttServiceConstants.CONNECT_ACTION}</td>
- * </tr>
+ * <td align="left" valign="top"> [ MqttServiceConstants.CONNECT_ACTION][MqttServiceConstants.CONNECT_ACTION]</td>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#MESSAGE_ARRIVED_ACTION
- * MqttServiceConstants.MESSAGE_ARRIVED_ACTION}</td>
- * </tr>
+ * [ MqttServiceConstants.MESSAGE_ARRIVED_ACTION][MqttServiceConstants.MESSAGE_ARRIVED_ACTION]</td>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#MESSAGE_DELIVERED_ACTION
- * MqttServiceConstants.MESSAGE_DELIVERED_ACTION}</td>
- * </tr>
+ * [ MqttServiceConstants.MESSAGE_DELIVERED_ACTION][MqttServiceConstants.MESSAGE_DELIVERED_ACTION]</td>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#ON_CONNECTION_LOST_ACTION
- * MqttServiceConstants.ON_CONNECTION_LOST_ACTION}</td>
- * </tr>
- * </table>
- * </td>
+ * [ MqttServiceConstants.ON_CONNECTION_LOST_ACTION][MqttServiceConstants.ON_CONNECTION_LOST_ACTION]</td>
+</tr> *
+</table> *
+</td> *
  * <td align="left" valign="top">All operations</td>
- * </tr>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#CALLBACK_ERROR_MESSAGE
- * MqttServiceConstants.CALLBACK_ERROR_MESSAGE}
- * <td align="left" valign="top">String</td>
+ * [ MqttServiceConstants.CALLBACK_ERROR_MESSAGE][MqttServiceConstants.CALLBACK_ERROR_MESSAGE]
+</td> * <td align="left" valign="top">String</td>
  * <td align="left" valign="top">A suitable error message (taken from the
  * relevant exception where possible)</td>
  * <td align="left" valign="top">All failing operations</td>
- * </tr>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#CALLBACK_ERROR_NUMBER
- * MqttServiceConstants.CALLBACK_ERROR_NUMBER}
- * <td align="left" valign="top">int</td>
+ * [ MqttServiceConstants.CALLBACK_ERROR_NUMBER][MqttServiceConstants.CALLBACK_ERROR_NUMBER]
+</td> * <td align="left" valign="top">int</td>
  * <td align="left" valign="top">A suitable error code (taken from the relevant
  * exception where possible)</td>
  * <td align="left" valign="top">All failing operations</td>
- * </tr>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#CALLBACK_EXCEPTION_STACK
- * MqttServiceConstants.CALLBACK_EXCEPTION_STACK}</td>
+ * [ MqttServiceConstants.CALLBACK_EXCEPTION_STACK][MqttServiceConstants.CALLBACK_EXCEPTION_STACK]</td>
  * <td align="left" valign="top">String</td>
  * <td align="left" valign="top">The stacktrace of the failing call</td>
  * <td align="left" valign="top">The Connection Lost event</td>
- * </tr>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#CALLBACK_MESSAGE_ID
- * MqttServiceConstants.CALLBACK_MESSAGE_ID}</td>
+ * [ MqttServiceConstants.CALLBACK_MESSAGE_ID][MqttServiceConstants.CALLBACK_MESSAGE_ID]</td>
  * <td align="left" valign="top">String</td>
  * <td align="left" valign="top">The identifier for the message in the message
  * store, used by the Activity to acknowledge the arrival of the message, so
  * that the service may remove it from the store</td>
  * <td align="left" valign="top">The Message Arrived event</td>
- * </tr>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#CALLBACK_DESTINATION_NAME
- * MqttServiceConstants.CALLBACK_DESTINATION_NAME}
- * <td align="left" valign="top">String</td>
+ * [ MqttServiceConstants.CALLBACK_DESTINATION_NAME][MqttServiceConstants.CALLBACK_DESTINATION_NAME]
+</td> * <td align="left" valign="top">String</td>
  * <td align="left" valign="top">The topic on which the message was received</td>
  * <td align="left" valign="top">The Message Arrived event</td>
- * </tr>
+</tr> *
  * <tr>
  * <td align="left" valign="top">
- * {@link MqttServiceConstants#CALLBACK_MESSAGE_PARCEL
- * MqttServiceConstants.CALLBACK_MESSAGE_PARCEL}</td>
+ * [ MqttServiceConstants.CALLBACK_MESSAGE_PARCEL][MqttServiceConstants.CALLBACK_MESSAGE_PARCEL]</td>
  * <td align="left" valign="top">Parcelable</td>
  * <td align="left" valign="top">The new message encapsulated in Android
- * Parcelable format as a {@link ParcelableMqttMessage}</td>
+ * Parcelable format as a [ParcelableMqttMessage]</td>
  * <td align="left" valign="top">The Message Arrived event</td>
- * </tr>
- * </table>
+</tr> *
+</table> *
  */
 @SuppressLint("Registered")
-public class MqttService extends Service implements MqttTraceHandler {
-
-    public static final int KEY_NOTIFY_ID = 20208;
-
-    // Identifier for Intents, log messages, etc..
-    static final String TAG = "MqttService";
-
+class MqttService : Service(), MqttTraceHandler {
     // callback id for making trace callbacks to the Activity
     // needs to be set by the activity as appropriate
-    private String traceCallbackId;
+    private var traceCallbackId: String? = null
+    /**
+     * Check whether trace is on or off.
+     *
+     * @return the state of trace
+     */
+    /**
+     * Turn tracing on and off
+     *
+     * @param traceEnabled set `true` to turn on tracing, `false` to turn off tracing
+     */
     // state of tracing
-    private boolean traceEnabled = false;
+    var isTraceEnabled = false
 
     // somewhere to persist received messages until we're sure
     // that they've reached the application
-    MessageStore messageStore;
+    @JvmField
+    var messageStore: MessageStore? = null
 
     // An intent receiver to deal with changes in network connectivity
-    private NetworkConnectionIntentReceiver networkConnectionMonitor;
+    private var networkConnectionMonitor: NetworkConnectionIntentReceiver? = null
 
     //a receiver to recognise when the user changes the "background data" preference
     // and a flag to track that preference
     // Only really relevant below android version ICE_CREAM_SANDWICH - see
     // android docs
-    private BackgroundDataPreferenceReceiver backgroundDataPreferenceMonitor;
-    private volatile boolean backgroundDataEnabled = true;
+    private var backgroundDataPreferenceMonitor: BackgroundDataPreferenceReceiver? = null
+
+    @Volatile
+    private var backgroundDataEnabled = true
 
     // a way to pass ourself back to the activity
-    private MqttServiceBinder mqttServiceBinder;
+    private var mqttServiceBinder: MqttServiceBinder? = null
 
     // mapping from client handle strings to actual client connections.
-    private Map<String/* clientHandle */, MqttConnection/* client */> connections = new ConcurrentHashMap<>();
-
-    public MqttService() {
-        super();
-    }
+    private val connections: MutableMap<String, MqttConnection?>? = ConcurrentHashMap()
 
     /**
      * pass data back to the Activity, by building a suitable Intent object and
@@ -257,25 +240,27 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param status       OK or Error
      * @param dataBundle   the data to be passed
      */
-    void callbackToActivity(String clientHandle, Status status,
-                            Bundle dataBundle) {
+    fun callbackToActivity(
+        clientHandle: String?, status: Status?,
+        dataBundle: Bundle?
+    ) {
         // Don't call traceDebug, as it will try to callbackToActivity leading
         // to recursion.
-        Intent callbackIntent = new Intent(
-                MqttServiceConstants.CALLBACK_TO_ACTIVITY);
+        val callbackIntent = Intent(
+            MqttServiceConstants.CALLBACK_TO_ACTIVITY
+        )
         if (clientHandle != null) {
             callbackIntent.putExtra(
-                    MqttServiceConstants.CALLBACK_CLIENT_HANDLE, clientHandle);
+                MqttServiceConstants.CALLBACK_CLIENT_HANDLE, clientHandle
+            )
         }
-        callbackIntent.putExtra(MqttServiceConstants.CALLBACK_STATUS, status);
+        callbackIntent.putExtra(MqttServiceConstants.CALLBACK_STATUS, status)
         if (dataBundle != null) {
-            callbackIntent.putExtras(dataBundle);
+            callbackIntent.putExtras(dataBundle)
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(callbackIntent);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(callbackIntent)
     }
-
     // The major API implementation follows :-
-
     /**
      * Get an MqttConnection object to represent a connection to a server
      *
@@ -286,14 +271,21 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @return a string to be used by the Activity as a "handle" for this
      * MqttConnection
      */
-    public String getClient(String serverURI, String clientId, String contextId, MqttClientPersistence persistence) {
-        String clientHandle = serverURI + ":" + clientId + ":" + contextId;
-        if (!connections.containsKey(clientHandle)) {
-            MqttConnection client = new MqttConnection(this, serverURI,
-                    clientId, persistence, clientHandle);
-            connections.put(clientHandle, client);
+    fun getClient(
+        serverURI: String,
+        clientId: String,
+        contextId: String,
+        persistence: MqttClientPersistence?
+    ): String {
+        val clientHandle = "$serverURI:$clientId:$contextId"
+        if (!connections!!.containsKey(clientHandle)) {
+            val client = MqttConnection(
+                this, serverURI,
+                clientId, persistence, clientHandle
+            )
+            connections[clientHandle] = client
         }
-        return clientHandle;
+        return clientHandle
     }
 
     /**
@@ -306,24 +298,27 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @throws MqttSecurityException thrown if there is a security exception
      * @throws MqttException         thrown for all other MqttExceptions
      */
-    public void connect(String clientHandle, MqttConnectOptions connectOptions,
-                        String invocationContext, String activityToken)
-            throws MqttSecurityException, MqttException {
-        MqttConnection client = getConnection(clientHandle);
-        client.connect(connectOptions, null, activityToken);
-
+    @Throws(MqttSecurityException::class, MqttException::class)
+    fun connect(
+        clientHandle: String, connectOptions: MqttConnectOptions?,
+        invocationContext: String?, activityToken: String?
+    ) {
+        val client = getConnection(clientHandle)
+        client.connect(connectOptions, null, activityToken)
     }
 
     /**
      * Request all clients to reconnect if appropriate
      */
-    void reconnect() {
-        traceDebug(TAG, "Reconnect to server, client size=" + connections.size());
-        for (MqttConnection client : connections.values()) {
-            traceDebug("Reconnect Client:",
-                    client.getClientId() + '/' + client.getServerURI());
-            if (this.isOnline()) {
-                client.reconnect();
+    fun reconnect() {
+        traceDebug(TAG, "Reconnect to server, client size=" + connections!!.size)
+        for (client in connections.values) {
+            traceDebug(
+                "Reconnect Client:",
+                client!!.clientId + '/' + client.serverURI
+            )
+            if (isOnline) {
+                client.reconnect()
             }
         }
     }
@@ -333,9 +328,9 @@ public class MqttService extends Service implements MqttTraceHandler {
      *
      * @param clientHandle identifies the MqttConnection to use
      */
-    public void close(String clientHandle) {
-        MqttConnection client = getConnection(clientHandle);
-        client.close();
+    fun close(clientHandle: String) {
+        val client = getConnection(clientHandle)
+        client.close()
     }
 
     /**
@@ -345,19 +340,21 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param invocationContext arbitrary data to be passed back to the application
      * @param activityToken     arbitrary identifier to be passed back to the Activity
      */
-    public void disconnect(String clientHandle, String invocationContext,
-                           String activityToken) {
+    fun disconnect(
+        clientHandle: String?, invocationContext: String?,
+        activityToken: String?
+    ) {
         if (clientHandle != null) {    // P:新增非空判断， Map 集合的 key 不能为 null
-            MqttConnection client = getConnection(clientHandle);
-            client.disconnect(invocationContext, activityToken);
-            connections.remove(clientHandle);
+            val client = getConnection(clientHandle)
+            client.disconnect(invocationContext, activityToken)
+            connections!!.remove(clientHandle)
         }
 
 
         // the activity has finished using us, so we can stop the service
         // the activities are bound with BIND_AUTO_CREATE, so the service will
         // remain around until the last activity disconnects
-        stopSelf();
+        stopSelf()
     }
 
     /**
@@ -368,16 +365,18 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param invocationContext arbitrary data to be passed back to the application
      * @param activityToken     arbitrary identifier to be passed back to the Activity
      */
-    public void disconnect(String clientHandle, long quiesceTimeout,
-                           String invocationContext, String activityToken) {
-        MqttConnection client = getConnection(clientHandle);
-        client.disconnect(quiesceTimeout, invocationContext, activityToken);
-        connections.remove(clientHandle);
+    fun disconnect(
+        clientHandle: String, quiesceTimeout: Long,
+        invocationContext: String?, activityToken: String?
+    ) {
+        val client = getConnection(clientHandle)
+        client.disconnect(quiesceTimeout, invocationContext, activityToken)
+        connections!!.remove(clientHandle)
 
         // the activity has finished using us, so we can stop the service
         // the activities are bound with BIND_AUTO_CREATE, so the service will
         // remain around until the last activity disconnects
-        stopSelf();
+        stopSelf()
     }
 
     /**
@@ -386,9 +385,9 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param clientHandle identifies the MqttConnection to use
      * @return true if the specified client is connected to an MQTT server
      */
-    public boolean isConnected(String clientHandle) {
-        MqttConnection client = getConnection(clientHandle);
-        return client.isConnected();
+    fun isConnected(clientHandle: String): Boolean {
+        val client = getConnection(clientHandle)
+        return client.isConnected
     }
 
     /**
@@ -405,13 +404,17 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @throws MqttPersistenceException when a problem occurs storing the message
      * @throws MqttException            if there was an error publishing the message
      */
-    public IMqttDeliveryToken publish(String clientHandle, String topic,
-                                      byte[] payload, int qos, boolean retained,
-                                      String invocationContext, String activityToken)
-            throws MqttPersistenceException, MqttException {
-        MqttConnection client = getConnection(clientHandle);
-        return client.publish(topic, payload, qos, retained, invocationContext,
-                activityToken);
+    @Throws(MqttPersistenceException::class, MqttException::class)
+    fun publish(
+        clientHandle: String, topic: String?,
+        payload: ByteArray?, qos: Int, retained: Boolean,
+        invocationContext: String?, activityToken: String?
+    ): IMqttDeliveryToken? {
+        val client = getConnection(clientHandle)
+        return client.publish(
+            topic!!, payload, qos, retained, invocationContext!!,
+            activityToken!!
+        )
     }
 
     /**
@@ -426,11 +429,13 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @throws MqttPersistenceException when a problem occurs storing the message
      * @throws MqttException            if there was an error publishing the message
      */
-    public IMqttDeliveryToken publish(String clientHandle, String topic,
-                                      MqttMessage message, String invocationContext, String activityToken)
-            throws MqttPersistenceException, MqttException {
-        MqttConnection client = getConnection(clientHandle);
-        return client.publish(topic, message, invocationContext, activityToken);
+    @Throws(MqttPersistenceException::class, MqttException::class)
+    fun publish(
+        clientHandle: String, topic: String?,
+        message: MqttMessage?, invocationContext: String?, activityToken: String?
+    ): IMqttDeliveryToken? {
+        val client = getConnection(clientHandle)
+        return client.publish(topic!!, message!!, invocationContext!!, activityToken!!)
     }
 
     /**
@@ -442,10 +447,12 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param invocationContext arbitrary data to be passed back to the application
      * @param activityToken     arbitrary identifier to be passed back to the Activity
      */
-    public void subscribe(String clientHandle, String topic, int qos,
-                          String invocationContext, String activityToken) {
-        MqttConnection client = getConnection(clientHandle);
-        client.subscribe(topic, qos, invocationContext, activityToken);
+    fun subscribe(
+        clientHandle: String, topic: String?, qos: Int,
+        invocationContext: String?, activityToken: String?
+    ) {
+        val client = getConnection(clientHandle)
+        client.subscribe(topic!!, qos, invocationContext!!, activityToken!!)
     }
 
     /**
@@ -457,10 +464,12 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param invocationContext arbitrary data to be passed back to the application
      * @param activityToken     arbitrary identifier to be passed back to the Activity
      */
-    public void subscribe(String clientHandle, String[] topic, int[] qos,
-                          String invocationContext, String activityToken) {
-        MqttConnection client = getConnection(clientHandle);
-        client.subscribe(topic, qos, invocationContext, activityToken);
+    fun subscribe(
+        clientHandle: String, topic: Array<String?>?, qos: IntArray?,
+        invocationContext: String?, activityToken: String?
+    ) {
+        val client = getConnection(clientHandle)
+        client.subscribe(topic!!, qos!!, invocationContext!!, activityToken!!)
     }
 
     /**
@@ -473,9 +482,16 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param activityToken     arbitrary identifier to be passed back to the Activity
      * @param messageListeners  a callback to handle incoming messages
      */
-    public void subscribe(String clientHandle, String[] topicFilters, int[] qos, String invocationContext, String activityToken, IMqttMessageListener[] messageListeners) {
-        MqttConnection client = getConnection(clientHandle);
-        client.subscribe(topicFilters, qos, invocationContext, activityToken, messageListeners);
+    fun subscribe(
+        clientHandle: String,
+        topicFilters: Array<String?>?,
+        qos: IntArray?,
+        invocationContext: String?,
+        activityToken: String?,
+        messageListeners: Array<IMqttMessageListener?>?
+    ) {
+        val client = getConnection(clientHandle)
+        client.subscribe(topicFilters, qos, invocationContext!!, activityToken!!, messageListeners)
     }
 
     /**
@@ -486,10 +502,12 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param invocationContext arbitrary data to be passed back to the application
      * @param activityToken     arbitrary identifier to be passed back to the Activity
      */
-    public void unsubscribe(String clientHandle, final String topic,
-                            String invocationContext, String activityToken) {
-        MqttConnection client = getConnection(clientHandle);
-        client.unsubscribe(topic, invocationContext, activityToken);
+    fun unsubscribe(
+        clientHandle: String, topic: String?,
+        invocationContext: String?, activityToken: String?
+    ) {
+        val client = getConnection(clientHandle)
+        client.unsubscribe(topic!!, invocationContext!!, activityToken!!)
     }
 
     /**
@@ -500,10 +518,12 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param invocationContext arbitrary data to be passed back to the application
      * @param activityToken     arbitrary identifier to be passed back to the Activity
      */
-    public void unsubscribe(String clientHandle, final String[] topic,
-                            String invocationContext, String activityToken) {
-        MqttConnection client = getConnection(clientHandle);
-        client.unsubscribe(topic, invocationContext, activityToken);
+    fun unsubscribe(
+        clientHandle: String, topic: Array<String?>?,
+        invocationContext: String?, activityToken: String?
+    ) {
+        val client = getConnection(clientHandle)
+        client.unsubscribe(topic!!, invocationContext!!, activityToken!!)
     }
 
     /**
@@ -512,9 +532,9 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param clientHandle identifies the MqttConnection
      * @return an array (possibly empty) of tokens
      */
-    public IMqttDeliveryToken[] getPendingDeliveryTokens(String clientHandle) {
-        MqttConnection client = getConnection(clientHandle);
-        return client.getPendingDeliveryTokens();
+    fun getPendingDeliveryTokens(clientHandle: String): Array<IMqttDeliveryToken> {
+        val client = getConnection(clientHandle)
+        return client.pendingDeliveryTokens
     }
 
     /**
@@ -523,12 +543,9 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param clientHandle identifies the MqttConnection
      * @return the MqttConnection identified by this handle
      */
-    private MqttConnection getConnection(String clientHandle) {
-        MqttConnection client = connections == null ? null : connections.get(clientHandle);
-        if (client == null) {
-            throw new IllegalArgumentException("Invalid ClientHandle");
-        }
-        return client;
+    private fun getConnection(clientHandle: String): MqttConnection {
+        return connections?.get(clientHandle)
+            ?: throw IllegalArgumentException("Invalid ClientHandle")
     }
 
     /**
@@ -537,115 +554,113 @@ public class MqttService extends Service implements MqttTraceHandler {
      *
      * @param clientHandle identifier for the client which received the message
      * @param id           identifier for the MQTT message
-     * @return {@link Status}
+     * @return [Status]
      */
-    public Status acknowledgeMessageArrival(String clientHandle, String id) {
-        if (messageStore.discardArrived(clientHandle, id)) {
-            return Status.OK;
+    fun acknowledgeMessageArrival(clientHandle: String?, id: String?): Status {
+        return if (messageStore!!.discardArrived(clientHandle, id)) {
+            Status.OK
         } else {
-            return Status.ERROR;
+            Status.ERROR
         }
     }
-
     // Extend Service
-
     /**
-     * @see Service#onCreate()
+     * @see Service.onCreate
      */
-    @Override
-    public void onCreate() {
-        super.onCreate();
+    override fun onCreate() {
+        super.onCreate()
         // create a binder that will let the Activity UI send
         // commands to the Service
-        mqttServiceBinder = new MqttServiceBinder(this);
+        mqttServiceBinder = MqttServiceBinder(this)
 
         // create somewhere to buffer received messages until
         // we know that they have been passed to the application
-        messageStore = new DatabaseMessageStore(this, this);
+        messageStore = DatabaseMessageStore(this, this)
     }
 
     /**
-     * @see Service#onDestroy()
+     * @see Service.onDestroy
      */
-    @Override
-    public void onDestroy() {
-        for (MqttConnection client : connections.values()) {
-            client.disconnect(null, null);
+    override fun onDestroy() {
+        for (client in connections!!.values) {
+            client!!.disconnect(null, null)
         }
         if (mqttServiceBinder != null) {
-            mqttServiceBinder = null;
+            mqttServiceBinder = null
         }
-
-        unregisterBroadcastReceivers();
-
-        if (this.messageStore != null) {
-            this.messageStore.close();
+        unregisterBroadcastReceivers()
+        if (messageStore != null) {
+            messageStore!!.close()
         }
-
-        stopForeground(true);
-        cancelNotify();
-
-        super.onDestroy();
+        stopForeground(true)
+        cancelNotify()
+        super.onDestroy()
     }
 
-    private void cancelNotify() {
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (manager != null) {
-            manager.cancel(KEY_NOTIFY_ID);
-        }
+    private fun cancelNotify() {
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        manager?.cancel(KEY_NOTIFY_ID)
     }
 
     /**
-     * @see Service#onBind(Intent)
+     * @see Service.onBind
      */
-    @Override
-    public IBinder onBind(Intent intent) {
+    override fun onBind(intent: Intent): IBinder? {
         // What we pass back to the Activity on binding -
         // a reference to ourself, and the activityToken
         // we were given when started
-        String activityToken = intent.getStringExtra(MqttServiceConstants.CALLBACK_ACTIVITY_TOKEN);
+        val activityToken = intent.getStringExtra(MqttServiceConstants.CALLBACK_ACTIVITY_TOKEN)
         if (mqttServiceBinder == null) {
-            mqttServiceBinder = new MqttServiceBinder(this);
+            mqttServiceBinder = MqttServiceBinder(this)
         }
-        mqttServiceBinder.setActivityToken(activityToken);
-        return mqttServiceBinder;
+        mqttServiceBinder!!.activityToken = activityToken
+        return mqttServiceBinder
     }
 
-    @Override
-    public boolean onUnbind(Intent intent) {
-        return super.onUnbind(intent);
+    override fun onUnbind(intent: Intent): Boolean {
+        return super.onUnbind(intent)
     }
 
     /**
-     * @see Service#onStartCommand(Intent, int, int)
+     * @see Service.onStartCommand
      */
-    @Override
-    public int onStartCommand(final Intent intent, int flags, final int startId) {
+    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            String channelId = "mqtt";
-            String channelName = "mqttChannel";
-            NotificationChannel channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_DEFAULT);
-            channel.setLockscreenVisibility(Notification.FLAG_FOREGROUND_SERVICE);
-            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
-            startForeground(KEY_NOTIFY_ID, buildNotification(new Notification.Builder(getApplicationContext(), channelId)));
-        } else if (getApplicationContext().getResources().getBoolean(R.bool.mqtt_foreground_notification_low_26)) {
-            startForeground(KEY_NOTIFY_ID, buildNotification(new Notification.Builder(getApplicationContext())));
+            val channelId = "mqtt"
+            val channelName = "mqttChannel"
+            val channel =
+                NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_DEFAULT)
+            channel.lockscreenVisibility = Notification.FLAG_FOREGROUND_SERVICE
+            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            manager?.createNotificationChannel(channel)
+            startForeground(
+                KEY_NOTIFY_ID, buildNotification(
+                    Notification.Builder(
+                        applicationContext, channelId
+                    )
+                )
+            )
+        } else if (applicationContext.resources.getBoolean(R.bool.mqtt_foreground_notification_low_26)) {
+            startForeground(
+                KEY_NOTIFY_ID, buildNotification(
+                    Notification.Builder(
+                        applicationContext
+                    )
+                )
+            )
         }
-        registerBroadcastReceivers();
-        return START_STICKY;
+        registerBroadcastReceivers()
+        return START_STICKY
     }
 
-    private Notification buildNotification(Notification.Builder builder) {
+    private fun buildNotification(builder: Notification.Builder): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            builder.setCategory(Notification.CATEGORY_SERVICE);
+            builder.setCategory(Notification.CATEGORY_SERVICE)
         }
         return builder.setSmallIcon(android.R.mipmap.sym_def_app_icon)
-                .setContentText(getApplicationContext().getResources().getString(R.string.mqtt_notification_content))
-                .setContentTitle(getApplicationContext().getResources().getString(R.string.mqtt_notification_title))
-                .build();
+            .setContentText(applicationContext.resources.getString(R.string.mqtt_notification_content))
+            .setContentTitle(applicationContext.resources.getString(R.string.mqtt_notification_title))
+            .build()
     }
 
     /**
@@ -654,26 +669,8 @@ public class MqttService extends Service implements MqttTraceHandler {
      *
      * @param traceCallbackId identifier to the callback into the Activity
      */
-    public void setTraceCallbackId(String traceCallbackId) {
-        this.traceCallbackId = traceCallbackId;
-    }
-
-    /**
-     * Turn tracing on and off
-     *
-     * @param traceEnabled set <code>true</code> to turn on tracing, <code>false</code> to turn off tracing
-     */
-    public void setTraceEnabled(boolean traceEnabled) {
-        this.traceEnabled = traceEnabled;
-    }
-
-    /**
-     * Check whether trace is on or off.
-     *
-     * @return the state of trace
-     */
-    public boolean isTraceEnabled() {
-        return this.traceEnabled;
+    fun setTraceCallbackId(traceCallbackId: String?) {
+        this.traceCallbackId = traceCallbackId
     }
 
     /**
@@ -682,9 +679,8 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param tag     identifier for the source of the trace
      * @param message the text to be traced
      */
-    @Override
-    public void traceDebug(String tag, String message) {
-        traceCallback(MqttServiceConstants.TRACE_DEBUG, tag, message);
+    override fun traceDebug(tag: String?, message: String?) {
+        traceCallback(MqttServiceConstants.TRACE_DEBUG, tag!!, message!!)
     }
 
     /**
@@ -693,20 +689,22 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param tag     identifier for the source of the trace
      * @param message the text to be traced
      */
-    @Override
-    public void traceError(String tag, String message) {
-        traceCallback(MqttServiceConstants.TRACE_ERROR, tag, message);
+    override fun traceError(tag: String?, message: String?) {
+        traceCallback(MqttServiceConstants.TRACE_ERROR,  tag!!, message!!)
     }
 
-    private void traceCallback(String severity, String tag, String message) {
-        if ((traceCallbackId != null) && (traceEnabled)) {
-            Bundle dataBundle = new Bundle();
-            dataBundle.putString(MqttServiceConstants.CALLBACK_ACTION, MqttServiceConstants.TRACE_ACTION);
-            dataBundle.putString(MqttServiceConstants.CALLBACK_TRACE_SEVERITY, severity);
-            dataBundle.putString(MqttServiceConstants.CALLBACK_TRACE_TAG, tag);
+    private fun traceCallback(severity: String, tag: String, message: String) {
+        if (traceCallbackId != null && isTraceEnabled) {
+            val dataBundle = Bundle()
+            dataBundle.putString(
+                MqttServiceConstants.CALLBACK_ACTION,
+                MqttServiceConstants.TRACE_ACTION
+            )
+            dataBundle.putString(MqttServiceConstants.CALLBACK_TRACE_SEVERITY, severity)
+            dataBundle.putString(MqttServiceConstants.CALLBACK_TRACE_TAG, tag)
             //dataBundle.putString(MqttServiceConstants.CALLBACK_TRACE_ID, traceCallbackId);
-            dataBundle.putString(MqttServiceConstants.CALLBACK_ERROR_MESSAGE, message);
-            callbackToActivity(traceCallbackId, Status.ERROR, dataBundle);
+            dataBundle.putString(MqttServiceConstants.CALLBACK_ERROR_MESSAGE, message)
+            callbackToActivity(traceCallbackId, Status.ERROR, dataBundle)
         }
     }
 
@@ -717,51 +715,62 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param message the text to be traced
      * @param e       the exception
      */
-    @Override
-    public void traceException(String tag, String message, Exception e) {
+    override fun traceException(tag: String?, message: String?, e: Exception?) {
         if (traceCallbackId != null) {
-            Bundle dataBundle = new Bundle();
-            dataBundle.putString(MqttServiceConstants.CALLBACK_ACTION, MqttServiceConstants.TRACE_ACTION);
-            dataBundle.putString(MqttServiceConstants.CALLBACK_TRACE_SEVERITY, MqttServiceConstants.TRACE_EXCEPTION);
-            dataBundle.putString(MqttServiceConstants.CALLBACK_ERROR_MESSAGE, message);
-            dataBundle.putSerializable(MqttServiceConstants.CALLBACK_EXCEPTION, e); //TODO: Check
-            dataBundle.putString(MqttServiceConstants.CALLBACK_TRACE_TAG, tag);
+            val dataBundle = Bundle()
+            dataBundle.putString(
+                MqttServiceConstants.CALLBACK_ACTION,
+                MqttServiceConstants.TRACE_ACTION
+            )
+            dataBundle.putString(
+                MqttServiceConstants.CALLBACK_TRACE_SEVERITY,
+                MqttServiceConstants.TRACE_EXCEPTION
+            )
+            dataBundle.putString(MqttServiceConstants.CALLBACK_ERROR_MESSAGE, message)
+            dataBundle.putSerializable(MqttServiceConstants.CALLBACK_EXCEPTION, e) //TODO: Check
+            dataBundle.putString(MqttServiceConstants.CALLBACK_TRACE_TAG, tag)
             //dataBundle.putString(MqttServiceConstants.CALLBACK_TRACE_ID, traceCallbackId);
-            callbackToActivity(traceCallbackId, Status.ERROR, dataBundle);
+            callbackToActivity(traceCallbackId, Status.ERROR, dataBundle)
         }
     }
 
-    @SuppressWarnings("deprecation")
-    private void registerBroadcastReceivers() {
+    private fun registerBroadcastReceivers() {
         if (networkConnectionMonitor == null) {
-            networkConnectionMonitor = new NetworkConnectionIntentReceiver();
-            registerReceiver(networkConnectionMonitor, new IntentFilter(
-                    ConnectivityManager.CONNECTIVITY_ACTION));
+            networkConnectionMonitor = NetworkConnectionIntentReceiver()
+            registerReceiver(
+                networkConnectionMonitor, IntentFilter(
+                    ConnectivityManager.CONNECTIVITY_ACTION
+                )
+            )
         }
-
-        if (Build.VERSION.SDK_INT < 14 /**Build.VERSION_CODES.ICE_CREAM_SANDWICH**/) {
+        if (Build.VERSION.SDK_INT < 14
+        /**Build.VERSION_CODES.ICE_CREAM_SANDWICH */
+        ) {
             // Support the old system for background data preferences
-            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-            backgroundDataEnabled = cm.getBackgroundDataSetting();
+            val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+            backgroundDataEnabled = cm.backgroundDataSetting
             if (backgroundDataPreferenceMonitor == null) {
-                backgroundDataPreferenceMonitor = new BackgroundDataPreferenceReceiver();
+                backgroundDataPreferenceMonitor = BackgroundDataPreferenceReceiver()
                 registerReceiver(
-                        backgroundDataPreferenceMonitor,
-                        new IntentFilter(
-                                ConnectivityManager.ACTION_BACKGROUND_DATA_SETTING_CHANGED));
+                    backgroundDataPreferenceMonitor,
+                    IntentFilter(
+                        ConnectivityManager.ACTION_BACKGROUND_DATA_SETTING_CHANGED
+                    )
+                )
             }
         }
     }
 
-    private void unregisterBroadcastReceivers() {
+    private fun unregisterBroadcastReceivers() {
         if (networkConnectionMonitor != null) {
-            unregisterReceiver(networkConnectionMonitor);
-            networkConnectionMonitor = null;
+            unregisterReceiver(networkConnectionMonitor)
+            networkConnectionMonitor = null
         }
-
-        if (Build.VERSION.SDK_INT < 14 /**Build.VERSION_CODES.ICE_CREAM_SANDWICH**/) {
+        if (Build.VERSION.SDK_INT < 14
+        /**Build.VERSION_CODES.ICE_CREAM_SANDWICH */
+        ) {
             if (backgroundDataPreferenceMonitor != null) {
-                unregisterReceiver(backgroundDataPreferenceMonitor);
+                unregisterReceiver(backgroundDataPreferenceMonitor)
             }
         }
     }
@@ -772,54 +781,50 @@ public class MqttService extends Service implements MqttTraceHandler {
      * data connection again
      */
     @SuppressLint("InvalidWakeLockTag")
-    private class NetworkConnectionIntentReceiver extends BroadcastReceiver {
-        @Override
+    private inner class NetworkConnectionIntentReceiver : BroadcastReceiver() {
         @SuppressLint("Wakelock")
-        public void onReceive(Context context, Intent intent) {
-            traceDebug(TAG, "Internal network status receive.");
+        override fun onReceive(context: Context, intent: Intent) {
+            traceDebug(TAG, "Internal network status receive.")
             // we protect against the phone switching off
             // by requesting a wake lock - we request the minimum possible wake
             // lock - just enough to keep the CPU running until we've finished
-            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-            WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MQTT");
-            wl.acquire();
-            traceDebug(TAG, "Reconnect for Network recovery.");
-            if (isOnline()) {
-                traceDebug(TAG, "Online,reconnect.");
+            val pm = getSystemService(POWER_SERVICE) as PowerManager
+            val wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MQTT")
+            wl.acquire()
+            traceDebug(TAG, "Reconnect for Network recovery.")
+            if (isOnline) {
+                traceDebug(TAG, "Online,reconnect.")
                 // we have an internet connection - have another try at
                 // connecting
-                reconnect();
+                reconnect()
             } else {
-                notifyClientsOffline();
+                notifyClientsOffline()
             }
-
-            wl.release();
+            wl.release()
         }
     }
 
     /**
      * @return whether the android service can be regarded as online
      */
-    public boolean isOnline() {
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-        //noinspection RedundantIfStatement
-        if (networkInfo != null
-                && networkInfo.isAvailable()
-                && networkInfo.isConnected()
-                && backgroundDataEnabled) {
-            return true;
+    val isOnline: Boolean
+        get() {
+            val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+            val networkInfo = cm.activeNetworkInfo
+            return if (networkInfo != null && networkInfo.isAvailable
+                && networkInfo.isConnected
+                && backgroundDataEnabled
+            ) {
+                true
+            } else false
         }
-
-        return false;
-    }
 
     /**
      * Notify clients we're offline
      */
-    private void notifyClientsOffline() {
-        for (MqttConnection connection : connections.values()) {
-            connection.offline();
+    private fun notifyClientsOffline() {
+        for (connection in connections!!.values) {
+            connection!!.offline()
         }
     }
 
@@ -827,23 +832,20 @@ public class MqttService extends Service implements MqttTraceHandler {
      * Detect changes of the Allow Background Data setting - only used below
      * ICE_CREAM_SANDWICH
      */
-    private class BackgroundDataPreferenceReceiver extends BroadcastReceiver {
-
-        @SuppressWarnings("deprecation")
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-            traceDebug(TAG, "Reconnect since BroadcastReceiver.");
-            if (cm.getBackgroundDataSetting()) {
+    private inner class BackgroundDataPreferenceReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+            traceDebug(TAG, "Reconnect since BroadcastReceiver.")
+            if (cm.backgroundDataSetting) {
                 if (!backgroundDataEnabled) {
-                    backgroundDataEnabled = true;
+                    backgroundDataEnabled = true
                     // we have the Internet connection - have another try at
                     // connecting
-                    reconnect();
+                    reconnect()
                 }
             } else {
-                backgroundDataEnabled = false;
-                notifyClientsOffline();
+                backgroundDataEnabled = false
+                notifyClientsOffline()
             }
         }
     }
@@ -854,24 +856,30 @@ public class MqttService extends Service implements MqttTraceHandler {
      * @param clientHandle identifier for the client
      * @param bufferOpts   the DisconnectedBufferOptions for this client
      */
-    public void setBufferOpts(String clientHandle, DisconnectedBufferOptions bufferOpts) {
-        MqttConnection client = getConnection(clientHandle);
-        client.setBufferOpts(bufferOpts);
+    fun setBufferOpts(clientHandle: String, bufferOpts: DisconnectedBufferOptions?) {
+        val client = getConnection(clientHandle)
+        client.setBufferOpts(bufferOpts)
     }
 
-    public int getBufferedMessageCount(String clientHandle) {
-        MqttConnection client = getConnection(clientHandle);
-        return client.getBufferedMessageCount();
+    fun getBufferedMessageCount(clientHandle: String): Int {
+        val client = getConnection(clientHandle)
+        return client.bufferedMessageCount
     }
 
-    public MqttMessage getBufferedMessage(String clientHandle, int bufferIndex) {
-        MqttConnection client = getConnection(clientHandle);
-        return client.getBufferedMessage(bufferIndex);
+    fun getBufferedMessage(clientHandle: String, bufferIndex: Int): MqttMessage {
+        val client = getConnection(clientHandle)
+        return client.getBufferedMessage(bufferIndex)
     }
 
-    public void deleteBufferedMessage(String clientHandle, int bufferIndex) {
-        MqttConnection client = getConnection(clientHandle);
-        client.deleteBufferedMessage(bufferIndex);
+    fun deleteBufferedMessage(clientHandle: String, bufferIndex: Int) {
+        val client = getConnection(clientHandle)
+        client.deleteBufferedMessage(bufferIndex)
     }
 
+    companion object {
+        const val KEY_NOTIFY_ID = 20208
+
+        // Identifier for Intents, log messages, etc..
+        const val TAG = "MqttService"
+    }
 }

@@ -11,6 +11,7 @@
 
     <application>
         <service
+            android:exported="false"
             android:name="com.bnd.mqtt.MqttService" />
     </application>
 

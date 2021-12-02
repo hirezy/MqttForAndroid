@@ -1,108 +1,111 @@
+package com.bnd.mqtt
 
-package com.bnd.mqtt;
-
-import android.os.Parcel;
-import android.os.Parcelable;
-
-import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.MqttMessage
+import android.os.Parcelable
+import android.os.Parcel
+import android.os.Parcelable.Creator
 
 /**
- * <p>
+ *
+ *
  * A way to flow MqttMessages via Bundles/Intents
- * </p>
- * 
- * <p>
+ *
+ *
+ *
+ *
  * An application will probably use this only when receiving a message from a
  * Service in a Bundle - the necessary code will be something like this :-
- * </p>
- * <pre>
- * <code>
- * 	private void messageArrivedAction(Bundle data) {
- * 		ParcelableMqttMessage message = (ParcelableMqttMessage) data
- * 			.getParcelable(MqttServiceConstants.CALLBACK_MESSAGE_PARCEL);
- *		<i>Use the normal {@link MqttMessage} methods on the the message object.</i>
- * 	}
- * 
- * </code>
- * </pre>
  *
- * <p>
+ * <pre>
+ * `
+ * private void messageArrivedAction(Bundle data) {
+ * ParcelableMqttMessage message = (ParcelableMqttMessage) data
+ * .getParcelable(MqttServiceConstants.CALLBACK_MESSAGE_PARCEL);
+ * *Use the normal [MqttMessage] methods on the the message object.*
+ * }
+ *
+` *
+</pre> *
+ *
+ *
+ *
  * It is unlikely that an application will directly use the methods which are
  * specific to this class.
- * </p>
+ *
  */
+class ParcelableMqttMessage : MqttMessage, Parcelable {
+    /**
+     * @return the messageId
+     */
+    @JvmField
+    var messageId: String? = null
 
-public class ParcelableMqttMessage extends MqttMessage implements Parcelable {
+    internal constructor(original: MqttMessage) : super(original.payload) {
+        qos = original.qos
+        isRetained = original.isRetained
+        isDuplicate = original.isDuplicate
+    }
 
-  String messageId = null;
+    internal constructor(parcel: Parcel) : super(parcel.createByteArray()) {
+        qos = parcel.readInt()
+        val flags = parcel.createBooleanArray()
+        isRetained = flags!![0]
+        isDuplicate = flags[1]
+        messageId = parcel.readString()
+    }
 
-  ParcelableMqttMessage(MqttMessage original) {
-    super(original.getPayload());
-    setQos(original.getQos());
-    setRetained(original.isRetained());
-    setDuplicate(original.isDuplicate());
-  }
+    /**
+     * Describes the contents of this object
+     */
+    override fun describeContents(): Int {
+        return 0
+    }
 
-  ParcelableMqttMessage(Parcel parcel) {
-    super(parcel.createByteArray());
-    setQos(parcel.readInt());
-    boolean[] flags = parcel.createBooleanArray();
-    setRetained(flags[0]);
-    setDuplicate(flags[1]);
-    messageId = parcel.readString();
-  }
+    /**
+     * Writes the contents of this object to a parcel
+     *
+     * @param parcel
+     * The parcel to write the data to.
+     * @param flags
+     * this parameter is ignored
+     */
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeByteArray(payload)
+        parcel.writeInt(qos)
+        parcel.writeBooleanArray(booleanArrayOf(isRetained, isDuplicate))
+        parcel.writeString(messageId)
+    }
 
-  /**
-   * @return the messageId
-   */
-  public String getMessageId() {
-    return messageId;
-  }
+    companion object {
 
-  /**
-   * Describes the contents of this object
-   */
-  @Override
-  public int describeContents() {
-    return 0;
-  }
+        object CREATOR : Creator<ParcelableMqttMessage> {
+            override fun createFromParcel(parcel: Parcel): ParcelableMqttMessage {
+                return ParcelableMqttMessage(parcel)
+            }
 
-  /**
-   * Writes the contents of this object to a parcel
-   * 
-   * @param parcel
-   *            The parcel to write the data to.
-   * @param flags
-   *            this parameter is ignored
-   */
-  @Override
-  public void writeToParcel(Parcel parcel, int flags) {
-    parcel.writeByteArray(getPayload());
-    parcel.writeInt(getQos());
-    parcel.writeBooleanArray(new boolean[]{isRetained(), isDuplicate()});
-    parcel.writeString(messageId);
-  }
+            override fun newArray(size: Int): Array<ParcelableMqttMessage?> {
+                return arrayOfNulls(size)
+            }
+        }
 
-	/**
-	 * A creator which creates the message object from a parcel
-	 */
-	public static final Creator<ParcelableMqttMessage> CREATOR = new Creator<ParcelableMqttMessage>() {
-
-		/**
-		 * Creates a message from the parcel object
-		 */
-		@Override
-		public ParcelableMqttMessage createFromParcel(Parcel parcel) {
-			return new ParcelableMqttMessage(parcel);
-		}
-
-		/**
-		 * creates an array of type {@link ParcelableMqttMessage}[]
-		 * 
-		 */
-		@Override
-		public ParcelableMqttMessage[] newArray(int size) {
-			return new ParcelableMqttMessage[size];
-		}
-	};
+//        /**
+//         * A creator which creates the message object from a parcel
+//         */
+//        val CREATOR: Creator<ParcelableMqttMessage?> = object : Creator<ParcelableMqttMessage?> {
+//            /**
+//             * Creates a message from the parcel object
+//             */
+//            override fun createFromParcel(parcel: Parcel): ParcelableMqttMessage? {
+//                return ParcelableMqttMessage(parcel)
+//            }
+//
+//            /**
+//             * creates an array of type [ParcelableMqttMessage][]
+//             *
+//             */
+//            override fun newArray(size: Int): Array<ParcelableMqttMessage?> {
+//                return arrayOfNulls(size)
+//            }
+//        }
+    }
 }
