@@ -4,7 +4,7 @@
 **1. 导入依赖**  
 ```groovy
 dependencies {
-    implementation 'com.github.hirezy:MqttForAndroid:1.0.0' 
+    implementation 'com.github.hirezy:MqttForAndroid:v1.0.0'
 }
 ```
 
