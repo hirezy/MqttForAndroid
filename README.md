@@ -147,7 +147,8 @@ data class MqttOptions(
     val cleanSession: Boolean = true,   // 是否清楚 Session 会话
     val reconnectInterval: Long = 1000, // mqtt 连接失败后自动重连时间间隔(ms), 连接中断将立即重连
     val keepAliveInterval: Int = 60,    // 心跳包时间(s)
-    val connectTimeOut: Int = 10        // MQTT 连接超时时间(s)
+    val connectTimeOut: Int = 10,        // MQTT 连接超时时间(s)
+    val topics: MutableList<String>? =null //MQTT初始化订阅Topic,注意这里支持单个和多个，默认Qos等级为1,数量取决于topics的size
 )
 ```
 
@@ -210,3 +211,5 @@ http://192.168.40.151:80/hirezy/mqtt
 "password": "123456",
 "version": "1.0.0"
 }
+
+
