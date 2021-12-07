@@ -17,7 +17,7 @@ interface MyMqtt {
 
     fun addOnMsgListener(listener: OnMqttMsgListener?)
 
-    fun addOnStatusChangeListener(listener: OnMqttStatusListener?)
+    fun addOnStatusListener(listener: OnMqttStatusListener?)
 
 
 

@@ -6,22 +6,26 @@ import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import org.eclipse.paho.client.mqttv3.*
 import kotlin.math.max
 
-//class MqttHelper(private val context: Context, private val mqttOptions: MqttOptions) : MyMqtt {
-class MqttHelper private constructor(private val context: Context, private val mqttOptions: MqttOptions) : MyMqtt{
-
+class MqttHelper private constructor(
+    private val context: Context,
+    private val mqttOptions: MqttOptions
+) :
+    MyMqtt {
+    private var TAG = MqttHelper::class.java.name
 
     companion object {
         @Volatile
         private var mSingleMqttInstance: MqttHelper? = null
-        fun getInstance(context: Context,mqttOptions: MqttOptions): MqttHelper? {
+        fun getInstance(context: Context, mqttOptions: MqttOptions): MqttHelper? {
             if (mSingleMqttInstance == null) {
                 synchronized(MqttHelper::class.java) {
                     if (mSingleMqttInstance == null) {
-                        mSingleMqttInstance = MqttHelper(context,mqttOptions)
+                        mSingleMqttInstance = MqttHelper(context, mqttOptions)
                     }
                 }
             }
@@ -53,10 +57,20 @@ class MqttHelper private constructor(private val context: Context, private val m
     init {
         if (mqttOptions.willTopic.isNotEmpty() && mqttOptions.willTopic.isNotBlank()
             && !mqttOptions.willTopic.contains(MqttTopic.MULTI_LEVEL_WILDCARD)
-            && !mqttOptions.willTopic.contains(MqttTopic.SINGLE_LEVEL_WILDCARD)) {
-            mqttConnectOptions.setWill(mqttOptions.willTopic, mqttOptions.willMsg.toByteArray(), mqttOptions.willQos, false)
+            && !mqttOptions.willTopic.contains(MqttTopic.SINGLE_LEVEL_WILDCARD)
+        ) {
+            mqttConnectOptions.setWill(
+                mqttOptions.willTopic,
+                mqttOptions.willMsg.toByteArray(),
+                mqttOptions.willQos,
+                false
+            )
         }
-        mqttAndroidClient = MqttAndroidClient(context.applicationContext, mqttOptions.serviceUrl, mqttOptions.clientId)
+        mqttAndroidClient = MqttAndroidClient(
+            context.applicationContext,
+            mqttOptions.serviceUrl,
+            mqttOptions.clientId
+        )
         mqttAndroidClient!!.setCallback(object : MqttCallbackExtended {
             var lastMessage: MqttMessage? = null
             override fun connectComplete(reconnect: Boolean, serverURI: String?) {
@@ -96,7 +110,7 @@ class MqttHelper private constructor(private val context: Context, private val m
                 }
             } else {
                 mqttAndroidClient?.connect(mqttConnectOptions, null, object : IMqttActionListener {
-                    override fun onSuccess(asyncActionToken: IMqttToken) {
+                    override fun onSuccess(token: IMqttToken) {
                         val disconnectedBufferOptions = DisconnectedBufferOptions()
                         disconnectedBufferOptions.isBufferEnabled = true
                         disconnectedBufferOptions.bufferSize = 100
@@ -115,7 +129,6 @@ class MqttHelper private constructor(private val context: Context, private val m
             changeState(MqttStatus.FAILURE, e)
         }
     }
-
 
 
     private fun reconnect() {
@@ -139,15 +152,38 @@ class MqttHelper private constructor(private val context: Context, private val m
 
     private fun subscribeToService() {
         try {
-            mqttAndroidClient?.subscribe(mqttOptions.serviceUrl, mqttOptions.subQos, null, object : IMqttActionListener {
-                override fun onSuccess(asyncActionToken: IMqttToken) {
-                    changeState(MqttStatus.SUCCESS, null)
-                }
 
-                override fun onFailure(asyncActionToken: IMqttToken, exception: Throwable) {
-                    changeState(MqttStatus.FAILURE, exception)
+            if (mqttOptions!=null){
+                val data=mqttOptions.topics
+                //更具topics构造qos优先级数组
+                data?.let {
+                    val intArray = IntArray(data.size)
+                    data.forEachIndexed { index, s ->
+                        intArray[index] = 1
+                    }
+
+                    mqttAndroidClient?.subscribe(
+                        data.toTypedArray(),
+                        intArray,
+                        null,
+                        object : IMqttActionListener {
+                            override fun onSuccess(token: IMqttToken?) {
+                                val topics = token!!.topics
+                                Log.i(TAG, "connect onSuccess:${topics.size}")
+                                topics?.let { topic->
+                                    topic.forEach {
+                                        Log.i(TAG, "connect onSuccess topic is:${it}")
+                                    }
+                                }
+                                changeState(MqttStatus.SUCCESS, null)
+                            }
+
+                            override fun onFailure(token: IMqttToken?, exception: Throwable?) {
+                                changeState(MqttStatus.FAILURE, exception)
+                            }
+                        })
                 }
-            })
+            }
         } catch (e: Exception) {
             changeState(MqttStatus.FAILURE, e)
         }
@@ -162,12 +198,12 @@ class MqttHelper private constructor(private val context: Context, private val m
     }
 
     override fun subscribe(
-        topicFilters: Array<String>,
+        topics: Array<String>,
         qos: IntArray,
         listener: OnSubTopicListener?
     ) {
         try {
-            mqttAndroidClient?.subscribe(topicFilters, qos, null, listener)
+            mqttAndroidClient?.subscribe(topics, qos, null, listener)
         } catch (e: MqttException) {
             e.printStackTrace()
         }
@@ -195,7 +231,7 @@ class MqttHelper private constructor(private val context: Context, private val m
         mMsgListener = listener
     }
 
-    override fun addOnStatusChangeListener(listener: OnMqttStatusListener?) {
+    override fun addOnStatusListener(listener: OnMqttStatusListener?) {
         mStatusListener = listener
     }
 
@@ -210,7 +246,10 @@ class MqttHelper private constructor(private val context: Context, private val m
             if (reconnectRunner == null) {
                 reconnectRunner = ReconnectRunner(context.applicationContext)
             }
-            reconnectHandler?.postDelayed(reconnectRunner!!, max(0, mqttOptions.reconnectInterval))
+            reconnectHandler?.postDelayed(
+                reconnectRunner!!,
+                max(0, mqttOptions.reconnectInterval)
+            )
         }
     }
 

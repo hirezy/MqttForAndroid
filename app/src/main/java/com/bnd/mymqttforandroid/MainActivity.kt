@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity(),OnMqttMsgListener, OnMqttStatusListener
         )
         mqttHelper = MqttHelper.getInstance(MainApp.instance.mContext!!, options)!!
         mqttHelper.addOnMsgListener(this)
-        mqttHelper.addOnStatusChangeListener(this)
+        mqttHelper.addOnStatusListener(this)
         mqttHelper.connect()
 
         btnSend.setOnClickListener {

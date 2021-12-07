@@ -1,7 +1,6 @@
 package com.bnd.mqtt
 
 data class MqttOptions(
-
     val serviceUrl: String,
     val username: String,
     val password: String,
@@ -13,5 +12,6 @@ data class MqttOptions(
     val cleanSession: Boolean = true,
     val reconnectInterval: Long = 1000,
     val keepAliveInterval: Int = 20,
-    val connectTimeOut: Int = 10
+    val connectTimeOut: Int = 10,
+    val topics: MutableList<String>? =null
 )

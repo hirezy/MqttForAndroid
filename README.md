@@ -4,7 +4,7 @@
 **1. 导入依赖**  
 ```groovy
 dependencies {
-    implementation 'com.github.hirezy:MqttForAndroid:v1.0.0'
+    implementation 'com.github.hirezy:MqttForAndroid:v1.0.0' //此处默认1.0.0版本
 }
 ```
 
@@ -26,7 +26,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
     )
     mqttHelper = MqttHelper(this, options)
     mqttHelper.addOnMsgListener(onMqttMsgListener)
-    mqttHelper.addOnStatusChangeListener(onMqttStatusChangeListener)
+    mqttHelper.addOnStatusListener(onMqttStatusListener)
 }
 ```
 
@@ -34,11 +34,11 @@ override fun onCreate(savedInstanceState: Bundle?) {
 ```kotlin
 mqttHelper.connect()
 ```
-&emsp;&emsp;连接成功或失败，以及中途的连接掉线，会触发 OnMqttStatusChangeListener 回调  
+&emsp;&emsp;连接成功或失败，以及中途的连接掉线，会触发 OnMqttStatusListener 回调  
 
 **4. MQTT 连接状态监听**  
 ```kotlin
-private val onMqttStatusChangeListener = object : OnMqttStatusChangeListener {
+private val onMqttStatusListener = object : OnMqttStatusListener {
 
     /**
      * [state] MQTT 连接状态改变:
