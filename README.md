@@ -24,7 +24,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
         willTopic = "will/android",     // 遗嘱 Topic，不能存在通配符 # 和 +，可用于监听对方是否掉线
         willMsg = "I'm Died - $Id"      // 遗嘱消息，当客户端掉线，MQTT 服务发送pingreq包，客户端不回复 pingresp 包，MQTT 发送遗嘱消息到 订阅 willTopic 的客户端
     )
-    mqttHelper = MqttHelper(this, options)
+    mqttHelper = MqttHelper.getInstance(Context!!, options)!!
     mqttHelper.addOnMsgListener(onMqttMsgListener)
     mqttHelper.addOnStatusListener(onMqttStatusListener)
 }
