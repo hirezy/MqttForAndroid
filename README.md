@@ -72,10 +72,19 @@ private val onMqttMsgListener = object : OnMqttMsgListener {
     /**
      * MQTT 发布消息回调
      * [payload] 发布的消息
+     * [topics] 发布的topic
      */
-    override fun onPubMessage(payload: ByteArray) {
+    fun onPubMessage(payload: ByteArray, topics: Array<String>?)
 
-    }
+    /**
+     * 发布的 MQTT 消息失败
+     */
+    fun onPubMessageFail(payload: ByteArray, topic: String?)
+    
+    /**
+     * 发布的 MQTT 消息失败
+     */
+    fun onPubMessageFail(payload: ByteArray, topics: Array<String>?)
 }
 ```
 &emsp;&emsp;onSubMessage 订阅的消息回调，因为存在订阅多个 topic 的情况，所以回调能知道是来自哪个 Topic 的消息；  
